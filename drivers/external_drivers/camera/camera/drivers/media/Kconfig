@@ -1,5 +1,0 @@
-#
-# Kconfig for Camera drivers
-#
-source drivers/external_drivers/camera/drivers/media/pci/Kconfig
-source drivers/external_drivers/camera/drivers/media/i2c/Kconfig
