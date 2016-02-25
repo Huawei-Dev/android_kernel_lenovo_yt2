@@ -51,6 +51,7 @@
 #include <asm/intel-mid.h>
 
 #include "mdfld_dsi_dbi.h"
+#include "mdfld_dsi_dpi.h"
 #ifdef CONFIG_MID_DSI_DPU
 #include "mdfld_dsi_dbi_dpu.h"
 #endif
@@ -70,6 +71,14 @@
 
 #include "pvr_bridge.h"
 
+#include <linux/HWVersion.h>
+
+extern int Read_HW_ID(void);
+extern int Read_LCD_ID(void);
+extern int Read_PROJ_ID(void);
+
+static u8 *panel_unique_id;
+
 /* SH DPST */
 #include "psb_dpst_func.h"
 
@@ -87,6 +96,14 @@
 #define KEEP_UNUSED_CODE_DRIVER_DISPATCH 0
 
 #define HDMI_MONITOR_NAME_LENGTH 20
+
+/* GCT */
+#define PANEL_NAME_MAX_LEN	        16
+#define GCT_R20_HEADER_SIZE		16
+#define GCT_R20_DISPLAY_DESC_SIZE	48
+
+static u8 panel_name[PANEL_NAME_MAX_LEN+1] = {0};
+
 
 /* Hack to Turn GFX islands up - BEGIN */
 static void power_up(int pm_reg, u32 pm_mask);
@@ -119,6 +136,9 @@ int drm_psb_set_gamma_pending = 0;
 int drm_psb_set_gamma_pipe = MDFLD_PIPE_MAX;
 int gamma_setting_save[256] = {0};
 int csc_setting_save[6] = {0};
+int gamma_red_max_save = 0;
+int gamma_green_max_save = 0;
+int gamma_blue_max_save = 0;
 /*EXPORT_SYMBOL(drm_psb_debug);*/
 static int drm_psb_trap_pagefaults;
 
@@ -1126,7 +1146,136 @@ bool mrst_get_vbt_data(struct drm_psb_private *dev_priv)
 {
 	struct drm_device *dev = dev_priv->dev;
 
-	dev_priv->panel_id = PanelID;
+	u32 platform_config_address;
+	u8 *pVBT_virtual;
+	u8 primary_panel;
+	u8 number_desc = 0;
+	u8 panel_name_id[PANEL_NAME_MAX_LEN+1] = {0};
+	struct intel_mid_vbt *pVBT = &dev_priv->vbt_data;
+	void *panel_desc;
+	struct pci_dev *pci_gfx_root = pci_get_bus_and_slot(0, PCI_DEVFN(2, 0));
+	mdfld_dsi_encoder_t mipi_mode;
+	int ret = 0, len = 0;
+
+	PSB_DEBUG_ENTRY("\n");
+
+	if (!pci_gfx_root) {
+		DRM_ERROR("Invalid root\n");
+		return false;
+	}
+
+	/*get the address of the platform config vbt, B0:D2:F0;0xFC */
+	pci_read_config_dword(pci_gfx_root, 0xFC, &platform_config_address);
+	pci_dev_put(pci_gfx_root);
+
+	/**
+	 * if platform_config_address is 0,
+	 * that means FW doesn't support VBT
+	 */
+	if (platform_config_address == 0) {
+		pVBT->size = 0;
+		return false;
+	}
+
+	/*copy vbt data to local memory*/
+	pVBT_virtual = ioremap(platform_config_address, sizeof(*pVBT));
+	if (!pVBT_virtual) {
+		DRM_ERROR("fail to ioremap platform_config_address:0x%x\n",
+			  platform_config_address);
+		return false;
+	}
+	memcpy(pVBT, pVBT_virtual, sizeof(*pVBT));
+	iounmap(pVBT_virtual); /* Free virtual address space */
+
+	if (strncmp(pVBT->signature, "$GCT", 4)) {
+		DRM_ERROR("wrong GCT signature\n");
+		return false;
+	}
+	PSB_DEBUG_ENTRY("GCT Revision is %#x\n", pVBT->revision);
+
+	number_desc = pVBT->num_of_panel_desc;
+	primary_panel = pVBT->primary_panel_idx;
+	dev_priv->gct_data.bpi = primary_panel; /*save boot panel id*/
+
+
+	/* Get panel information from GCT*/
+	pVBT->panel_descs =
+		ioremap(platform_config_address + GCT_R20_HEADER_SIZE,
+			GCT_R20_DISPLAY_DESC_SIZE * number_desc);
+	panel_desc = (u8 *)pVBT->panel_descs +
+		(primary_panel * GCT_R20_DISPLAY_DESC_SIZE);
+
+	if (!panel_desc) {
+		DRM_ERROR("Invalid desc\n");
+		return false;
+	}
+
+	strncpy(panel_name, panel_desc, PANEL_NAME_MAX_LEN);
+
+	switch(Read_PROJ_ID()) {
+		case PROJ_ID_ZE500ML:
+			switch (Read_LCD_ID()) {
+				case ZE500ML_LCD_ID_CTP:
+				case ZE500ML_LCD_ID_HSD:
+				case ZE500ML_LCD_ID_TM:
+					dev_priv->panel_id = OTM1284A_VID;
+					strncpy(panel_name_id, "OTM1284A", strlen("OTM1284A"));
+					break;
+			}
+			break;
+		case PROJ_ID_ZE550ML:
+			switch (Read_LCD_ID()) {
+				case ZE550ML_LCD_ID_OTM_TM:
+				case ZE550ML_LCD_ID_OTM_CPT:
+					dev_priv->panel_id = OTM1284A_VID;
+					strncpy(panel_name_id, "OTM1284A", strlen("OTM1284A"));
+					break;
+			}
+			break;
+		case PROJ_ID_ZE551ML:
+		case PROJ_ID_ZE551ML_CKD:
+		case PROJ_ID_ZE551ML_ESE:
+		case PROJ_ID_ZX550ML:
+			switch (Read_LCD_ID()){
+				case ZE551ML_LCD_ID_NT_TM:
+					dev_priv->panel_id = NT35596_VID;
+					strncpy(panel_name_id, "NT35596", strlen("NT35596"));
+					break;
+				case ZE551ML_LCD_ID_NT_AUO:
+					dev_priv->panel_id = NT35596_VID;
+					strncpy(panel_name_id, "NT35596", strlen("NT35596"));
+					break;
+				case ZE551ML_LCD_ID_OTM_INX:
+					dev_priv->panel_id = OTM1901A_VID;
+					strncpy(panel_name_id, "OTM1901A", strlen("OTM1901A"));
+					break;
+			}
+			break;
+		case PROJ_ID_ZR550ML:
+			switch (Read_LCD_ID()){
+				case ZR550ML_LCD_ID_NT_TM:
+					dev_priv->panel_id = NT35596_VID;
+					strncpy(panel_name_id, "NT35596", strlen("NT35596"));
+					break;
+				case ZR550ML_LCD_ID_OTM_INX:
+					dev_priv->panel_id = OTM1901A_VID;
+					strncpy(panel_name_id, "OTM1901A", strlen("OTM1901A"));
+					break;
+			}
+			break;
+		default:
+			dev_priv->panel_id = OTM1284A_VID;
+			strncpy(panel_name_id, "OTM1284A", strlen("OTM1284A"));
+			break;
+	}
+//	dev_priv->panel_id = PanelID;
+
+	panel_unique_id = panel_name;
+	if (strcmp(panel_name_id, panel_unique_id) == 0 || panel_unique_id == NULL || panel_unique_id == 0)
+		panel_unique_id = "ffffffff";
+
+	printk("[DISP] %s, PanelID = %d, Unique ID = %s, Panel name = %s\n",
+		__func__, dev_priv->panel_id, panel_unique_id, panel_name);
 	dev_priv->mipi_encoder_type = get_mipi_panel_type(dev);
 
 	if (is_dual_dsi(dev) && IS_ANN(dev)) {
@@ -1812,6 +1961,8 @@ static int psb_driver_load(struct drm_device *dev, unsigned long chipset)
 		INIT_WORK(&dev_priv->te_work, mdfld_te_handler_work);
 		INIT_WORK(&dev_priv->reset_panel_work,
 				mdfld_reset_panel_handler_work);
+	} else {
+		INIT_WORK(&dev_priv->reset_panel_work, mdfld_reset_dpi_panel_handler_work);
 	}
 	INIT_WORK(&dev_priv->vsync_event_work, mdfld_vsync_event_work);
 
@@ -2976,6 +3127,11 @@ static int psb_vsync_set_ioctl(struct drm_device *dev, void *data,
 					DRM_ERROR("fail to get vsync on pipe %d, ret %d\n", pipe, ret);
 					vsync_state_dump(dev, pipe);
 
+					if (	dsi_config && dsi_config->dsi_hw_context.panel_on) {
+						printk("[DISP] RESET the panel\n");
+						schedule_work(&dev_priv->reset_panel_work);
+					}
+
 					if (!IS_ANN(dev)) {
 						if (pipe != 1 &&
 							is_panel_vid_or_cmd(dev) == MDFLD_DSI_ENCODER_DBI &&
@@ -4092,14 +4248,12 @@ static int psb_proc_init(struct drm_minor *minor)
 
 #ifdef CONFIG_SUPPORT_HDMI
 	psb_hdmi_proc_init(minor);
-#endif
 
 #ifdef CONFIG_SUPPORT_TRIGER_RGX_HWR
 	rgx_HWR_control_proc_init(minor);
 #endif
-
 	csc_setting = proc_create_data(CSC_PROC_ENTRY, 0644, minor->proc_root, &psb_csc_proc_fops, minor);
-
+#endif
 	return 0;
 }
 
@@ -4408,9 +4562,73 @@ static __init int parse_hdmi_edid(char *arg)
 early_param("hdmi_edid", parse_hdmi_edid);
 #endif
 
+static int lcd_unique_id_read(struct file *file, char __user *buffer,
+				    size_t count, loff_t *ppos)
+{
+	int len = 0;
+	ssize_t ret = 0;
+	char *buff;
+
+	buff = kmalloc(100, GFP_KERNEL);
+	if(!buff)
+		return -ENOMEM;
+
+	len += sprintf(buff + len, "%s\n", panel_unique_id);
+	ret = simple_read_from_buffer(buffer,count,ppos,buff,len);
+	kfree(buff);
+
+	return ret;
+}
+static int lcd_unique_id_write(struct file *file, const char *buffer,
+			  size_t count, loff_t *ppos)
+{
+	return 0;
+}
+
+static int panel_id_read(struct file *file, char __user *buffer,
+				    size_t count, loff_t *ppos)
+{
+	int len = 0;
+	int lcd_id;
+	ssize_t ret = 0;
+	char *buff;
+
+	buff = kmalloc(100, GFP_KERNEL);
+	if(!buff)
+		return -ENOMEM;
+
+	lcd_id = Read_LCD_ID();
+
+	len += sprintf(buff + len, "%d\n", lcd_id);
+	ret = simple_read_from_buffer(buffer,count,ppos,buff,len);
+	kfree(buff);
+
+	return ret;
+}
+static int panel_id_write(struct file *file, const char *buffer,
+			  size_t count, loff_t *ppos)
+{
+	return 0;
+}
+
+
+static const struct file_operations psb_lcd_unique_id_proc_fops = {
+       .owner = THIS_MODULE,
+       .read = lcd_unique_id_read,
+       .write = lcd_unique_id_write,
+ };
+
+static const struct file_operations psb_panel_id_proc_fops = {
+       .owner = THIS_MODULE,
+       .read = panel_id_read,
+       .write = panel_id_write,
+ };
+
 static int __init psb_init(void)
 {
 	int ret;
+	struct proc_dir_entry *lcd_unique_id;
+	struct proc_dir_entry *lcd_type;
 
 #if defined(MODULE) && defined(CONFIG_NET)
 	psb_kobject_uevent_init();
@@ -4438,6 +4656,18 @@ static int __init psb_init(void)
 	else
 		DRM_INFO("OTM_HDMI_INIT_FAILE\n");
 #endif
+
+	lcd_unique_id = proc_create(LCD_UNIQUE_ID_PROC_ENTRY, 0444, NULL, &psb_lcd_unique_id_proc_fops);
+	if (!lcd_unique_id) {
+		DRM_ERROR("Unable to create %s\n", LCD_UNIQUE_ID_PROC_ENTRY);
+		return -EINVAL;
+	}
+
+	lcd_type = proc_create(PANEL_ID_PROC_ENTRY, 0444, NULL, &psb_panel_id_proc_fops);
+	if (!lcd_type) {
+		DRM_ERROR("Unable to create %s\n", PANEL_ID_PROC_ENTRY);
+		return -EINVAL;
+	}
 
 	return ret;
 }

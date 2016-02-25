@@ -136,13 +136,6 @@ config R63311_MIPI_VIDEO_MODE
 	bool "support jdi 1920x1080 MIPI panel"
 	default n
 
-config SUPPORT_OTM8018B_MIPI_480X854_DISPLAY
-	bool "Support CONFIG_SUPPORT_OTM8018B_MIPI_480X854_DISPLAY"
-	depends on DRM_MDFLD || DRM_CTP
-	default n
-	help
-	  xxxxxx
-
 config SUPPORT_DDS_MIPI_SWITCH
         bool "Support DDS MIPI switch"
         depends on DRM_MDFLD || DRM_CTP
@@ -214,6 +207,46 @@ config SUPPORT_MIPI_H8C7_DISPLAY
 config SUPPORT_MIPI_H8C7_CMD_DISPLAY
        bool "Support CMI h8c7 720x1280 MIPI interface Panel"
        depends on DRM_MDFLD || DRM_CTP
+       default n
+       help
+         xxxxxx
+
+if A500CG
+config SUPPORT_MIPI_HX8394_DISPLAY
+       bool "Support Himax HX8394 720x1280 MIPI interface Panel"
+       depends on DRM_MDFLD || DRM_CTP
+       default n
+       help
+         xxxxxx
+
+config SUPPORT_MIPI_ORISE1283A_DISPLAY
+       bool "Support Orise OTM1283A 720x1280 MIPI interface Panel"
+       depends on DRM_MDFLD || DRM_CTP
+       default n
+       help
+         xxxxxx
+endif
+
+config SUPPORT_MIPI_OTM1284A_DISPLAY
+       bool "Support Orise OTM1284A 720x1280 4-lanes MIPI interface Panel"
+       default n
+       help
+         xxxxxx
+
+config SUPPORT_MIPI_OTM1901A_DISPLAY
+       bool "Support Orise OTM1901A 1080x1920 4-lanes MIPI interface Panel"
+       default n
+       help
+         xxxxxx
+
+config SUPPORT_MIPI_OTM1284A_TWO_LANES_DISPLAY
+       bool "Support Orise OTM1284A 720x1280 2-lanes MIPI interface Panel"
+       default n
+       help
+         xxxxxx
+
+config SUPPORT_MIPI_NT35596_DISPLAY
+       bool "Support Novatek NT35596 1080x1920 4-lanes MIPI interface Panel"
        default n
        help
          xxxxxx

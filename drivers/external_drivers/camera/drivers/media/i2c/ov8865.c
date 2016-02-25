@@ -50,7 +50,8 @@
 #define __KERNEL__
 #endif
 
-#include "ov8865_bld_otp.c"
+#include "ov8865_bld_otp.h"
+
 #define OV8865_BIN_FACTOR_MAX	2
 #define OV8865_OTP_INPUT_NAME "ov8865_otp.bin"
 
@@ -71,9 +72,9 @@ static int bu64243_t_focus_abs(struct v4l2_subdev *sd, s32 value);
 module_param_call(vcm_ctrl, bu64243_vcm_ctrl, param_get_uint,
 				&ctrl_value, S_IRUGO | S_IWUSR);
 
-static int ov8865_raw_size;
-static int ov8865_otp_size;
-static unsigned char ov8865_raw[DATA_BUF_SIZE];
+//static int ov8865_raw_size;
+//static int ov8865_otp_size;
+//static unsigned char ov8865_raw[DATA_BUF_SIZE];
 static unsigned char ov8865_otp_data[DATA_BUF_SIZE];
 static u16 exposure_time;
 static int op_dump_otp;
@@ -94,12 +95,12 @@ module_param(log_level, int, 0644);
 
 static int ov8865_dump_otp(const char *val, struct kernel_param *kp)
 {
-	int ret;
-	ret = ov8865_otp_save(ov8865_raw, ov8865_raw_size, OV8865_SAVE_RAW_DATA);
+	int ret = 0;
+	//ret = ov8865_otp_save(ov8865_raw, ov8865_raw_size, OV8865_SAVE_RAW_DATA);
 	if(ret != 0)
 		OV8865_LOG(2, "Fail to save ov8865 RAW data\n");
 
-	ret = ov8865_otp_save(ov8865_otp_data, ov8865_otp_size, OV8865_SAVE_OTP_DATA);
+	//ret = ov8865_otp_save(ov8865_otp_data, ov8865_otp_size, OV8865_SAVE_OTP_DATA);
 	if(ret != 0)
 		OV8865_LOG(2, "Fail to save ov8865 OTP data\n");
 
@@ -1618,12 +1619,12 @@ static int ov8865_s_config(struct v4l2_subdev *sd,
 		OV8865_LOG(2,"ov8865 load from user-space failed, load from sensor\n");
 		ov8865_write_reg(client, OV8865_8BIT, 0x5002, 0x00);
 		ov8865_write_reg(client, OV8865_8BIT, 0x0100, 0x01);
-		ret = ov8865_otp_read(client, ov8865_raw, &ov8865_raw_size);
+		//ret = ov8865_otp_read(client, ov8865_raw, &ov8865_raw_size);
 		ov8865_write_reg(client, OV8865_8BIT, 0x5002, 0x08);
 		ov8865_write_reg(client, OV8865_8BIT, 0x0100, 0x00);
 		if (!ret) {
 			//printk("ov8865 otp read done\n");
-			ret = ov8865_otp_trans(ov8865_raw, ov8865_raw_size, ov8865_otp_data, &ov8865_otp_size);
+			//ret = ov8865_otp_trans(ov8865_raw, ov8865_raw_size, ov8865_otp_data, &ov8865_otp_size);
 			if (!ret) {
 			//	printk("ov8865 otp trans done\n");
 				dev->otp_data = ov8865_otp_data;

@@ -70,6 +70,9 @@ extern int drm_psb_set_gamma_pending;
 extern int drm_psb_set_gamma_pipe;
 extern int gamma_setting_save[256];
 extern int csc_setting_save[6];
+extern int gamma_red_max_save;
+extern int gamma_green_max_save;
+extern int gamma_blue_max_save;
 extern u32 DISP_PLANEB_STATUS;
 
 extern struct ttm_bo_driver psb_ttm_bo_driver;
@@ -114,6 +117,8 @@ enum enum_ports {
 #define HDMI_PROC_ENTRY "hdmi_power"
 #define GPIO_PROC_ENTRY "hdmi_gpio_control"
 #define CSC_PROC_ENTRY "csc_control"
+#define LCD_UNIQUE_ID_PROC_ENTRY "lcd_unique_id"
+#define PANEL_ID_PROC_ENTRY "asus_panel_id"
 #define RGX_PROC_ENTRY "rgx_hwr_control"
 
 

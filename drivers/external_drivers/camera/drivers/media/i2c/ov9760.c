@@ -45,8 +45,7 @@
 #define __KERNEL__
 #endif
 
-#include "ov9760_bld_otp.c"
-
+#include "ov9760_bld_otp.h"
 
 #define DEBUG_VERBOSE	(1<<0)
 #define DEBUG_GAIN_EXP	(1<<1)
@@ -92,12 +91,12 @@ module_param_call(dump_otp, ov9760_dump_otp, param_get_uint,
 
 static int ov9760_dump_otp(const char *val, struct kernel_param *kp)
 {
-	int ret;
-	ret = ov9760_otp_save(ov9760_data,ov9760_size,OV9760_SAVE_RAW_DATA);
+	int ret = 0;
+	//ret = ov9760_otp_save(ov9760_data,ov9760_size,OV9760_SAVE_RAW_DATA);
 	if(ret != 0)
 		OV9760_LOG(2,"Fail to save ov9760 RAW data\n");
 
-	ret = ov9760_otp_save(otp_data,otp_size,OV9760_SAVE_OTP_DATA);
+	//ret = ov9760_otp_save(otp_data,otp_size,OV9760_SAVE_OTP_DATA);
 	if(ret != 0)
 		OV9760_LOG(2,"Fail to save ov9760 OTP data\n");
 	return 0;
@@ -1303,12 +1302,12 @@ ov9760_s_config(struct v4l2_subdev *sd, int irq, void *platform_data)
 	//if(ret) {
 		OV9760_LOG(1,"ov9760 load from user-space failed, load from sensor\n");
 		ov9760_write_reg_array(client, ov9760_streaming);
-		ret = ov9760_otp_read(client, ov9760_data, &ov9760_size);
+		//ret = ov9760_otp_read(client, ov9760_data, &ov9760_size);
 		ov9760_write_reg_array(client, ov9760_suspend);
 		if (!ret)
 		{
 			OV9760_LOG(1,"ov9760 otp read done\n");
-			ret = ov9760_otp_trans(ov9760_data, ov9760_size, otp_data, &otp_size);
+			//ret = ov9760_otp_trans(ov9760_data, ov9760_size, otp_data, &otp_size);
 			if (!ret)
 			{
 				OV9760_LOG(1,"ov9760 otp trans done\n");

@@ -489,7 +489,7 @@ static void mid_pipe_event_handler(struct drm_device *dev, uint32_t pipe)
 		queue_work(dev_priv->vsync_wq, &dev_priv->te_work);
 	}
 
-#if 0
+#if 1
 	if (pipe == drm_psb_set_gamma_pipe && drm_psb_set_gamma_pending) {
 		if (pipe == 0)
 			dsi_config = dev_priv->dsi_configs[0];
@@ -502,9 +502,9 @@ static void mid_pipe_event_handler(struct drm_device *dev, uint32_t pipe)
 		for (i = 0; i < 256; i++)
 			REG_WRITE(regs->palette_reg + i*4, gamma_setting_save[i] );
 
-		REG_WRITE(regs->gamma_red_max_reg, ctx->gamma_red_max);
-		REG_WRITE(regs->gamma_green_max_reg, ctx->gamma_green_max);
-		REG_WRITE(regs->gamma_blue_max_reg, ctx->gamma_blue_max);
+		REG_WRITE(regs->gamma_red_max_reg, gamma_red_max_save);
+		REG_WRITE(regs->gamma_green_max_reg, gamma_green_max_save);
+		REG_WRITE(regs->gamma_blue_max_reg, gamma_blue_max_save);
 
 		val = REG_READ(regs->pipeconf_reg);
 		val |= (PIPEACONF_GAMMA);

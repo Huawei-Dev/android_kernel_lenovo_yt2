@@ -108,18 +108,9 @@ $(DRIVER_NAME)-objs += \
 	$(DISPLAYDIR)/tng_wa.o \
 	$(DISPLAYDIR)/pmu_tng.o \
 	$(DISPLAYDIR)/cmn_cabc.o \
-	$(DISPLAYDIR)/jdi_vid.o \
-	$(DISPLAYDIR)/jdi_cmd.o \
-	$(DISPLAYDIR)/cmi_vid.o \
-	$(DISPLAYDIR)/cmi_cmd.o \
-	$(DISPLAYDIR)/sharp10x19_vid.o \
-	$(DISPLAYDIR)/sharp10x19_cmd.o \
-	$(DISPLAYDIR)/sharp25x16_vid.o \
-	$(DISPLAYDIR)/sharp25x16_cmd.o \
-	$(DISPLAYDIR)/sdc16x25_8_cmd.o \
-	$(DISPLAYDIR)/sdc25x16_cmd.o \
-	$(DISPLAYDIR)/jdi25x16_vid.o \
-	$(DISPLAYDIR)/jdi25x16_cmd.o \
+	$(DISPLAYDIR)/otm1284a_vid.o \
+	$(DISPLAYDIR)/nt35596_vid.o \
+	$(DISPLAYDIR)/otm1901a_vid.o \
 	$(DISPLAYDIR)/ospm/pwr_mgmt.o \
 	$(DISPLAYDIR)/ospm/gfx_rtpm.o \
 	$(DISPLAYDIR)/ospm/dc_ospm.o \
